@@ -10,29 +10,31 @@ scws_parser is zhparser Evolution version.
 
 INSTALL
 -------
+
 1.INSTALL
 
 ./auto_install.sh
 
 2.USAGE
 
-used by pg_search: https://github.com/Casecommons/pg_search
+use pg_search: https://github.com/Casecommons/pg_search
 
 step one:
 
 create a migration.
-
+```
 class AddScwsParserExtension < ActiveRecord::Migration
   def change
     enable_extension "scws_parser"
   end
 end
-
+```
 step two:
 
 use dictionary named by 'scws_parser'
 
 eg.
+```
 pg_search_scope :search_by_anything,
                    against: [:name],
                    associated_against: {
@@ -41,7 +43,7 @@ pg_search_scope :search_by_anything,
                    :using => {
                     :tsearch => { dictionary: 'scws_parser'}
                   }
-
+```
 3.Congratulations
 
 You have full-text search of Chinese support in pg_search.
@@ -75,5 +77,16 @@ SELECT to_tsvector('testzhcfg','“今年保障房新开工数量虽然有所下
 SELECT to_tsquery('testzhcfg', '保障房资金压力');
 ```
 
+TROUBLE SHOOTING
+-------
+
+1. 安装上运行auto_install.sh，需要有sudo权限
+
+2. Makefile:17: /usr/lib/postgresql/9.3/lib/pgxs/src/makefiles/pgxs.mk: No such file or directory
+
+在UBUNTU下需要安装postgresql-server-dev-(insert version here)
+```
+sudo apt-get install postgresql-server-dev-(insert version here)
+```
 
 

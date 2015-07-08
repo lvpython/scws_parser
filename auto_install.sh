@@ -1,3 +1,3 @@
-cd scws-1.2.2 ; ./configure ; make install;
+cd scws-1.2.2 ; ./configure ; make && sudo make install;
 cd ..;
-SCWS_HOME=/usr/local make && make install;
+SCWS_HOME=/usr/local make && sudo make install;

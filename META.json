@@ -1,7 +1,7 @@
 {
-   "name": "zhparser",
+   "name": "scws_parser",
    "abstract": "a parser for full-text search of Chinese",
-   "description": "Zhparser is a PostgreSQL extension for full-text search of Chinese.It implements a Chinese parser base on the Simple Chinese Word Segmentation(SCWS)",
+   "description": "scws_parser is a PostgreSQL extension for full-text search of Chinese.It implements a Chinese parser base on the Simple Chinese Word Segmentation(SCWS)",
    "version": "0.1.4",
    "maintainer": [
       "Jov <amutu@amutu.com>"
@@ -18,21 +18,21 @@
       }
    },
    "provides": {
-      "zhparser": {
+      "scws_parser": {
          "abstract": "a parser for full-text search of Chinese",
-         "file": "zhparser--1.0.sql",
+         "file": "scws_parser--1.0.sql",
          "docfile": "README.md",
          "version": "0.1.4"
       }
    },
    "resources": {
-      "homepage": "http://amutu.com/blog/zhparser/",
+      "homepage": "http://amutu.com/blog/scws_parser/",
       "bugtracker": {
-         "web": "http://github.com/amutu/zhparser/issues/"
+         "web": "http://github.com/amutu/scws_parser/issues/"
       },
       "repository": {
-        "url":  "git://github.com/amutu/zhparser.git",
-        "web":  "http://github.com/amutu/zhparser/",
+        "url":  "git://github.com/amutu/scws_parser.git",
+        "web":  "http://github.com/amutu/scws_parser/",
         "type": "git"
       }
    },

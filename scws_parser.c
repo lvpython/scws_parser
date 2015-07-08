@@ -1,11 +1,11 @@
 /*-------------------------------------------------------------------------
  *
- * zhparser.c
- *	  a text search parser for Chinese
+ * scws_parser.c
+ *	   text search parser for postgres
  *
  *-------------------------------------------------------------------------
  */
-#include "zhparser.h"
+#include "scws_parser.h"
 
 #include "postgres.h"
 #include "miscadmin.h"
@@ -13,71 +13,34 @@
 #include "utils/guc.h"
 #include "utils/builtins.h"
 
-/* dict file extension */
-#define TXT_EXT ".txt"
-#define XDB_EXT ".xdb"
-/* length of file extension */
-#define EXT_LEN 4
 
+#ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
-/*
- * types
- */
-
-/* self-defined type */
-typedef struct
-{
-	char	   *buffer;			/* text to parse */
-	int		len;			/* length of the text in buffer */
-	int		pos;			/* position of the parser */
-	scws_t scws;
-	scws_res_t head;
-	scws_res_t curr;
-} ParserState;
-
-/* copy-paste from wparser.h of tsearch2 */
-typedef struct
-{
-	int			lexid;
-	char	   *alias;
-	char	   *descr;
-} LexDescr;
-
-static void init();
-
-static void init_type(LexDescr descr[]);
-
+#endif
 /*
  * prototypes
  */
-PG_FUNCTION_INFO_V1(zhprs_start);
-Datum		zhprs_start(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(scwsprs_start);
+Datum scwsprs_start(PG_FUNCTION_ARGS);
 
-PG_FUNCTION_INFO_V1(zhprs_getlexeme);
-Datum		zhprs_getlexeme(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(scwsprs_getlexeme);
+Datum scwsprs_getlexeme(PG_FUNCTION_ARGS);
 
-PG_FUNCTION_INFO_V1(zhprs_end);
-Datum		zhprs_end(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(scwsprs_end);
+Datum scwsprs_end(PG_FUNCTION_ARGS);
 
-PG_FUNCTION_INFO_V1(zhprs_lextype);
-Datum		zhprs_lextype(PG_FUNCTION_ARGS);
+PG_FUNCTION_INFO_V1(scwsprs_lextype);
+Datum scwsprs_lextype(PG_FUNCTION_ARGS);
 
-static scws_t scws = NULL;
-static bool type_inited = false;
-static ParserState parser_state;
-
+static bool lex_loaded = false;
 /* config */
-static bool dict_in_memory = false;
+static bool dict_in_memory = true;
 static char * extra_dicts = NULL;
-
+static scws_t scws = NULL;
 static bool punctuation_ignore = false;
 static bool seg_with_duality = false;
-static bool multi_short = false;
-static bool multi_duality = false;
-static bool multi_zmain = false;
-static bool multi_zall = false;
 
-static void init(){
+static void init_scws(){
 	char sharepath[MAXPGPATH];
 	char dict_path[MAXPGPATH];
 	char rule_path[MAXPGPATH];
@@ -85,16 +48,18 @@ static void init(){
 
 	List *elemlist;
 	ListCell *l;
-
+  if (scws != NULL) {
+    return;
+  }
 	if (!(scws = scws_new())) {
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
 				 errmsg("Failed to init Chinese Parser Lib SCWS!\"%s\"",""
 				       )));
 	}
-	
+
 	DefineCustomBoolVariable(
-		"zhparser.dict_in_memory",
+		"scws_parser.dict_in_memory",
 		"load dicts into memory",
 		"load dicts into memory",
 		&dict_in_memory,
@@ -106,7 +71,7 @@ static void init(){
 		NULL
 		);
 	DefineCustomStringVariable(
-		"zhparser.extra_dicts",
+		"scws_parser.extra_dicts",
 		"extra dicts files to load",
 		"extra dicts files to load",
 		&extra_dicts,
@@ -118,9 +83,9 @@ static void init(){
 		NULL
 		);
 	DefineCustomBoolVariable(
-		"zhparser.punctuation_ignore",
-		"set if zhparser ignores the puncuation",
-		"set if zhparser ignores the puncuation,except \\r and \\n",
+		"scws_parser.punctuation_ignore",
+		"set if scws_parser ignores the puncuation",
+		"set if scws_parser ignores the puncuation,except \\r and \\n",
 		&punctuation_ignore,
 		false,
 		PGC_USERSET,
@@ -131,58 +96,10 @@ static void init(){
 		);
 
 	DefineCustomBoolVariable(
-		"zhparser.seg_with_duality",
+		"scws_parser.seg_with_duality",
 		"segment words with duality",
 		"segment words with duality",
 		&seg_with_duality,
-		false,
-		PGC_USERSET,
-		0,
-		NULL,
-		NULL,
-		NULL
-		);
-	DefineCustomBoolVariable(
-		"zhparser.multi_short",
-		"prefer short words",
-		"prefer short words",
-		&multi_short,
-		false,
-		PGC_USERSET,
-		0,
-		NULL,
-		NULL,
-		NULL
-		);
-	DefineCustomBoolVariable(
-		"zhparser.multi_duality",
-		"prefer duality",
-		"prefer duality",
-		&multi_duality,
-		false,
-		PGC_USERSET,
-		0,
-		NULL,
-		NULL,
-		NULL
-		);
-	DefineCustomBoolVariable(
-		"zhparser.multi_zmain",
-		"prefer most important element",
-		"prefer most important element",
-		&multi_zmain,
-		false,
-		PGC_USERSET,
-		0,
-		NULL,
-		NULL,
-		NULL
-		);
-	DefineCustomBoolVariable(
-		"zhparser.multi_zall",
-		"prefer all element",
-		"prefer all element",
-		&multi_zall,
 		false,
 		PGC_USERSET,
 		0,
@@ -194,7 +111,7 @@ static void init(){
 	get_share_path(my_exec_path, sharepath);
 	snprintf(dict_path, MAXPGPATH, "%s/tsearch_data/%s.%s",
 			sharepath, "dict.utf8", "xdb");
-	scws_set_charset(scws, "utf-8");
+	scws_set_charset(scws, "utf8");
 
 	if(dict_in_memory)
 	    load_dict_mem_mode = SCWS_XDICT_MEM;
@@ -203,7 +120,7 @@ static void init(){
 	if( scws_set_dict(scws,dict_path,load_dict_mem_mode | SCWS_XDICT_XDB ) != 0){
 	    ereport(NOTICE,
 		    (errcode(ERRCODE_INTERNAL_ERROR),
-		     errmsg("zhparser set dict : \"%s\" failed!",dict_path
+		     errmsg("scws_parser set dict : \"%s\" failed!",dict_path
 			 )));
 	}
 
@@ -214,7 +131,7 @@ static void init(){
 		scws = NULL;
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("zhparser.extra_dicts syntax error! extra_dicts is \"%s\"",extra_dicts
+				 errmsg("scws_parser.extra_dicts syntax error! extra_dicts is \"%s\"",extra_dicts
 				       )));
 	    }
 
@@ -237,9 +154,9 @@ static void init(){
 			scws = NULL;
 			ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("zhparser.extra_dicts setting error,the file name must end with .txt or .xdb! error file name is \"%s\"",(char*)lfirst(l)
+				 errmsg("scws_parser.extra_dicts setting error,the file name must end with .txt or .xdb! error file name is \"%s\"",(char*)lfirst(l)
 				     )));
-		
+
 		}
 
 		snprintf(dict_path, MAXPGPATH, "%s/tsearch_data/%s",
@@ -248,7 +165,7 @@ static void init(){
 		if( scws_add_dict(scws,dict_path,load_dict_mode) != 0 ){
 		    ereport(NOTICE,
 			    (errcode(ERRCODE_INTERNAL_ERROR),
-			     errmsg("zhparser add dict : \"%s\" failed!",dict_path
+			     errmsg("scws_parser add dict : \"%s\" failed!",dict_path
 				 )));
 		}
 	    }
@@ -264,38 +181,18 @@ static void init(){
  * functions
  */
 Datum
-zhprs_start(PG_FUNCTION_ARGS)
+scwsprs_start(PG_FUNCTION_ARGS)
 {
-	ParserState *pst = &parser_state;
-	int multi_mode = 0x0;
-
-	if(scws == NULL)
-		init();
-	pst -> scws = scws;
+  init_scws();
+  ParserState *pst = (ParserState *) palloc(sizeof(ParserState));
 	pst -> buffer = (char *) PG_GETARG_POINTER(0);
 	pst -> len = PG_GETARG_INT32(1);
 	pst -> pos = 0;
+  pst -> scws = scws_fork(scws);
+	scws_set_ignore(pst -> scws, (int)punctuation_ignore);
+	scws_set_duality(pst -> scws,(int)seg_with_duality);
 
-	scws_set_ignore(scws, (int)punctuation_ignore);
-	scws_set_duality(scws,(int)seg_with_duality);
-
-	if(multi_short){
-	    multi_mode |= SCWS_MULTI_SHORT;
-	}
-
-	if(multi_duality){
-	    multi_mode |= SCWS_MULTI_DUALITY;
-	}
-
-	if(multi_zmain){
-	    multi_mode |= SCWS_MULTI_ZMAIN;
-	}
-
-	if(multi_zall){
-	    multi_mode |= SCWS_MULTI_ZALL;
-	}
-
-	scws_set_multi(scws,multi_mode);
+	scws_set_multi(pst -> scws, SCWS_MULTI_MASK);
 
 	scws_send_text(pst -> scws, pst -> buffer, pst -> len);
 
@@ -305,12 +202,12 @@ zhprs_start(PG_FUNCTION_ARGS)
 }
 
 Datum
-zhprs_getlexeme(PG_FUNCTION_ARGS)
+scwsprs_getlexeme(PG_FUNCTION_ARGS)
 {
-	ParserState *pst = (ParserState *) PG_GETARG_POINTER(0);
-	char	  **t = (char **) PG_GETARG_POINTER(1);
-	int		   *tlen = (int *) PG_GETARG_POINTER(2);
-	int			type = -1;
+  ParserState *pst   = (ParserState *) PG_GETARG_POINTER(0);
+  char        **t    = (char **) PG_GETARG_POINTER(1);
+  int         *tlen  = (int *) PG_GETARG_POINTER(2);
+  int         type   =  0;
 
 	if((pst -> head) == NULL ) /* already done the work,or no sentence */
 	{
@@ -324,7 +221,7 @@ zhprs_getlexeme(PG_FUNCTION_ARGS)
 
 		/*
  		* check the first char to determine the lextype
- 		* if out of [0,25],then set to 'x',mean unknown type 
+ 		* if out of [0,25],then set to 'x',mean unknown type
  		* so for Ag,Dg,Ng,Tg,Vg,the type will be unknown
  		* for full attr explanation,visit http://www.xunsearch.com/scws/docs.php#attr
 		*/
@@ -347,25 +244,28 @@ zhprs_getlexeme(PG_FUNCTION_ARGS)
 }
 
 Datum
-zhprs_end(PG_FUNCTION_ARGS)
+scwsprs_end(PG_FUNCTION_ARGS)
 {
+  ParserState *pst = (ParserState *) PG_GETARG_POINTER(0);
+  scws_free(pst -> scws);
+  pfree(pst);
 	PG_RETURN_VOID();
 }
 
 Datum
-zhprs_lextype(PG_FUNCTION_ARGS)
+scwsprs_lextype(PG_FUNCTION_ARGS)
 {
 	static LexDescr   descr[27];
-	if(type_inited == 0){
-	    init_type(descr);
-	    type_inited = 1;
+	if(lex_loaded == 0){
+	    init_lextype(descr);
+	    lex_loaded = 1;
 	}
 
 	PG_RETURN_POINTER(descr);
 }
 
-static void init_type(LexDescr descr[]){
-	/* 
+static void init_lextype(LexDescr descr[]){
+	/*
 	* there are 26 types in this parser,alias from a to z
 	* for full attr explanation,visit http://www.xunsearch.com/scws/docs.php#attr
 	*/

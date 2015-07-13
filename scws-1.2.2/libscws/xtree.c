@@ -33,13 +33,13 @@ static int _xtree_hasher(xtree_t xt, const char *s, int len)
 
 static node_t _xtree_node_search(node_t head, node_t **pnode, const char *key, int len)
 {
-	int cmp;	
-	
+	int cmp;
+
 	cmp = memcmp(key, head->key, len);
 	if (cmp == 0)
 		cmp = len - strlen(head->key);
-	
-	if (cmp != 0)	
+
+	if (cmp != 0)
 	{
 		node_t *next;
 
@@ -56,12 +56,12 @@ static node_t _xtree_node_search(node_t head, node_t **pnode, const char *key, i
 }
 
 static node_t _xtree_node_find(xtree_t xt, node_t **pnode, const char *key, int len)
-{	
+{
 	int i;
 	i = (xt->prime > 1 ? _xtree_hasher(xt, key, len) : 0);
 	if (xt->trees[i] == NULL)
 	{
-		if (pnode != NULL) 
+		if (pnode != NULL)
 			*pnode = &xt->trees[i];
 		return NULL;
 	}
@@ -75,7 +75,7 @@ xtree_t xtree_new(int base, int prime)
 	pool_t p;
 
 	p = pool_new();
-	xnew = pmalloc(p, sizeof(xtree_st));
+	xnew = pmalloc_x(p, 100000, '\0');
 	xnew->p = p;
 	xnew->base = (base ? base : 0xf422f);
 	xnew->prime = (prime ? prime :  31);
@@ -103,9 +103,9 @@ void xtree_nput(xtree_t xt, void *value, int vlen, const char *key, int len)
 		node->vlen = vlen;
 		return;
 	}
-	
+
 	if (value != NULL)
-	{	
+	{
 		*pnode = node = (node_t) pmalloc(xt->p, sizeof(node_st));
 		node->key = pstrndup(xt->p, key, len);
 		node->value = value;
@@ -140,7 +140,7 @@ void *xtree_get(xtree_t xt, const char *key, int *vlen)
 {
 	if (xt == NULL || key == NULL)
 		return NULL;
-	
+
 	return xtree_nget(xt, key, strlen(key), vlen);
 }
 
@@ -154,7 +154,7 @@ void xtree_del(xtree_t xt, const char *key)
 {
 	if (xt == NULL || key == NULL)
 		return;
-	
+
 	xtree_ndel(xt, key, strlen(key));
 }
 */
@@ -171,13 +171,13 @@ struct draw_arg
 static void _xtree_draw_node(node_t node, struct draw_arg *arg, int depth, char *icon1)
 {
 	char *icon2;
-	
+
 	icon2 = malloc(strlen(icon1) + 4);
 	strcpy(icon2, icon1);
 
 	// output the flag & icon
-	if (arg->flag == 'T')	
-		printf("(Ｔ) ");	
+	if (arg->flag == 'T')
+		printf("(Ｔ) ");
 	else
 	{
 		printf("%s", icon2);
@@ -194,15 +194,15 @@ static void _xtree_draw_node(node_t node, struct draw_arg *arg, int depth, char 
 	}
 
 	// draw the node data
-	if (node == NULL)	
-		printf("<NULL>\n");	
+	if (node == NULL)
+		printf("<NULL>\n");
 	else
 	{
 		printf("%s (value on 0x%x vlen=%d)\n", node->key, (unsigned int)node->value, node->vlen);
-		
+
 		arg->count++;
 		depth++;
-		if (depth > arg->depth) 
+		if (depth > arg->depth)
 			arg->depth = depth;
 
 		// draw the left & right
@@ -218,13 +218,13 @@ static void _xtree_draw_node(node_t node, struct draw_arg *arg, int depth, char 
 void xtree_draw(xtree_t xt)
 {
 	int i;
-	struct draw_arg arg;	
+	struct draw_arg arg;
 
 	if (!xt)
-		return;	
+		return;
 
 	for (i = 0; i < xt->prime; i++)
-	{		
+	{
 		arg.depth = 0;
 		arg.count = 0;
 		arg.flag = 'T';
@@ -251,7 +251,7 @@ static void _xtree_load_nodes(node_t node, node_t *nodes, int *count)
 	int i = *count;
 	if (node == NULL)
 		return;
-	
+
 	nodes[i] = node;
 	*count = ++i;
 	_xtree_load_nodes(node->left, nodes, count);
@@ -290,13 +290,13 @@ void xtree_optimize(xtree_t xt)
 	node_t *nodes;
 
 	if (!xt)
-		return;	
+		return;
 
 	for (i = 0; i < xt->prime; i++)
 	{
 		cnt = 0;
 		_xtree_count_nodes(xt->trees[i], &cnt);
-		if (cnt > 2)			
+		if (cnt > 2)
 		{
 			nodes = (node_t *)malloc(sizeof(node_t) * cnt);
 			cnt = 0;

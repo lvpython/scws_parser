@@ -26,5 +26,11 @@ CREATE TEXT SEARCH PARSER scws_parser (
     LEXTYPES = scwsprs_lextype
 );
 
+CREATE TEXT SEARCH DICTIONARY chinese_stem (
+  TEMPLATE = snowball,
+  Language = russian,
+  StopWords = chinese_utf8
+);
+
 CREATE TEXT SEARCH CONFIGURATION scws_parser (PARSER = scws_parser);
-ALTER TEXT SEARCH CONFIGURATION scws_parser ADD MAPPING FOR n,v,a,i,e,l WITH simple;
+ALTER TEXT SEARCH CONFIGURATION scws_parser ADD MAPPING FOR n,v,a,i,e,l,k,m,q WITH chinese_stem;

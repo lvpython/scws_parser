@@ -4,8 +4,15 @@
 #ifndef pstrdup
 #define pstrdup scws_pstrdup
 #endif
-
 #include "scws.h"
+#undef pstrdup
+
+#include "postgres.h"
+#include "miscadmin.h"
+#include "fmgr.h"
+#include "utils/guc.h"
+#include "utils/builtins.h"
+#include <string.h>
 
 /* dict file extension */
 #define TXT_EXT ".txt"
@@ -29,12 +36,19 @@ typedef struct
 typedef struct
 {
   int     lexid;
-  char     *alias;
-  char     *descr;
+  char    alias[4];
+  char    descr[20];
+} LLexDescr;
+
+typedef struct
+{
+  int     lexid;
+  char*    alias;
+  char*    descr;
 } LexDescr;
 
 static void init_lextype(LexDescr descr[]);
 
-#undef pstrdup
+
 
 #endif

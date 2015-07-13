@@ -7,6 +7,7 @@ ALTER EXTENSION scws_parser ADD function scwsprs_end(internal);
 ALTER EXTENSION scws_parser ADD function scwsprs_lextype(internal);
 ALTER EXTENSION scws_parser ADD text search parser scws_parser;
 ALTER EXTENSION scws_parser ADD TEXT SEARCH CONFIGURATION scws_parser;
+ALTER EXTENSION scws_parser ADD TEXT SEARCH DICTIONARY chinese_stem;
 ALTER EXTENSION scws_parser ALTER TEXT SEARCH CONFIGURATION scws_parser;
 -- add token mapping
 

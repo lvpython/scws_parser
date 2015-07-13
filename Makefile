@@ -4,8 +4,8 @@ MODULE_big = scws_parser
 OBJS = scws_parser.o
 SCWS_HOME = /usr/local
 EXTENSION = scws_parser
-DATA = scws_parser--1.0.sql scws_parser--unpackaged--1.0.sql
-DATA_TSEARCH = dict.utf8.xdb rules.utf8.ini chinese_utf8.stop
+DATA = conf/scws_parser--1.0.sql conf/scws_parser--unpackaged--1.0.sql
+DATA_TSEARCH = conf/dict.utf8.xdb conf/rules.utf8.ini conf/chinese_utf8.stop
 
 REGRESS = scws_parser
 

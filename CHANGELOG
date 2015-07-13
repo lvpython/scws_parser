@@ -3,3 +3,8 @@ rename zhparser to scws_parser
 -- use scws_fork, make it thread-safe
 -- make scws_parser extension auto-config
 -- make it more easy used by pg_search
+
+0.4 2015-07-13
+-- 完善Token类型与scws兼容
+-- 增加中文辞典配置
+-- 增加util, 性能评估

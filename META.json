@@ -2,9 +2,10 @@
    "name": "scws_parser",
    "abstract": "a parser for full-text search of Chinese",
    "description": "scws_parser is a PostgreSQL extension for full-text search of Chinese.It implements a Chinese parser base on the Simple Chinese Word Segmentation(SCWS)",
-   "version": "0.1.4",
+   "version": "0.4",
    "maintainer": [
-      "Jov <amutu@amutu.com>"
+      "Jov <amutu@amutu.com>",
+      "lvpython <lvpython@gmail.com>"
    ],
    "license": "postgresql",
    "prereqs": {
@@ -22,7 +23,7 @@
          "abstract": "a parser for full-text search of Chinese",
          "file": "scws_parser--1.0.sql",
          "docfile": "README.md",
-         "version": "0.1.4"
+         "version": "0.4"
       }
    },
    "resources": {
@@ -31,12 +32,12 @@
          "web": "http://github.com/amutu/scws_parser/issues/"
       },
       "repository": {
-        "url":  "git://github.com/amutu/scws_parser.git",
-        "web":  "http://github.com/amutu/scws_parser/",
+        "url":  "git@github.com:lvpython/scws_parser.git",
+        "web":  "https://github.com/lvpython/scws_parser",
         "type": "git"
       }
    },
-   "generated_by": "Jov",
+   "generated_by": "lvpython",
    "meta-spec": {
       "version": "1.0.0",
       "url": "http://pgxn.org/meta/spec.txt"

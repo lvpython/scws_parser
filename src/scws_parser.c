@@ -26,30 +26,13 @@ Datum scwsprs_end(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(scwsprs_lextype);
 Datum scwsprs_lextype(PG_FUNCTION_ARGS);
 
-static bool lex_loaded = false;
 /* config */
 static bool dict_in_memory = true;
 static scws_t scws = NULL;
 static bool punctuation_ignore = false;
 static bool seg_with_duality = false;
-static LexDescr   descr[50];
-static LLexDescr  l_descr[50];
 
-static int get_lextype(const char* s_type)
-{
-  int i = 0;
-  for(; i < 26; i++)
-  {
-    if (strcmp(l_descr[i].alias, s_type) == 0)
-      return l_descr[i].lexid;
-  }
-  for(; i < sizeof(l_descr); i++)
-  {
-    if (strcmp(l_descr[i].alias, s_type) == 0)
-      return l_descr[13].lexid;
-  }
-  return l_descr[23].lexid;
-}
+static LexDescr descr[50];
 
 static void define_custom_variable()
 {
@@ -124,7 +107,7 @@ scwsprs_start(PG_FUNCTION_ARGS)
 
   scws_set_ignore(pst->scws, (int)punctuation_ignore);
   scws_set_duality(pst->scws,(int)seg_with_duality);
-  scws_set_multi(pst->scws, SCWS_MULTI_ZALL);
+  scws_set_multi(pst->scws, SCWS_MULTI_MASK);
   scws_send_text(pst->scws, pst->buffer, pst->len);
 
   (pst->head) = (pst->curr) = scws_get_result(pst->scws);
@@ -152,7 +135,12 @@ scwsprs_getlexeme(PG_FUNCTION_ARGS)
     scws_res_t  curr = pst->curr;
 
     sprintf(s_type,"%.3s", curr->attr);
-    type = get_lextype(s_type);
+    if (strlen(s_type)==1) {
+      type = curr->attr[0];
+    }
+    else {
+      type = 110;
+    }
     *tlen = curr->len;
     *t = pst->buffer + curr->off;
 
@@ -180,28 +168,23 @@ scwsprs_end(PG_FUNCTION_ARGS)
 Datum
 scwsprs_lextype(PG_FUNCTION_ARGS)
 {
-  if(!lex_loaded){
-    init_lextype(descr);
-    lex_loaded = true;
-  }
+  init_lextype();
 
   PG_RETURN_POINTER(descr);
 }
 
 static void fill_lex(int n, const char *alias, const char *description)
 {
-  l_descr[n].lexid = 97 + n;
-  strcpy(l_descr[n].alias, alias);
-  strcpy(l_descr[n].descr, description);
   descr[n].lexid = 97 + n;
   descr[n].alias = pstrdup(alias);
   descr[n].descr = pstrdup(description);
 }
 
-void init_lextype(){
+static void init_lextype(){
   /*
   * visit http://www.xunsearch.com/scws/docs.php#attr
   */
+
   fill_lex(0, "a", "adjective");
   fill_lex(1, "b", "differentiation");
   fill_lex(2, "c", "conjunction");

@@ -47,7 +47,7 @@ typedef struct
   char*    descr;
 } LexDescr;
 
-static void init_lextype(LexDescr descr[]);
+static void init_lextype();
 
 
 
